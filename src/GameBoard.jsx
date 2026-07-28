@@ -19,7 +19,10 @@ export default function GameBoard({ grid, path, pointerPos, dragging, svgRef, on
 
   return (
 
-    <div className="bg-gray-900 rounded-xl p-2 touch-none" style={{maxWidth:'min(408px,calc(100vw-1rem))'}}>
+    <div
+      className="bg-gray-900 rounded-xl p-2 touch-none w-full"
+      style={{ maxWidth: 'max(280px, min(calc(100vw - 1rem), calc(100vh - 340px), 640px))' }}
+    >
       <svg
         ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}

@@ -32,7 +32,7 @@ function App() {
       />
 
       {(phase === 'play') && grid.length > 0 && (
-        <div className="mt-4">
+        <div className="mt-4 w-full flex justify-center">
           <GameBoard
             grid={grid}
             path={path}

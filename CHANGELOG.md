@@ -5,6 +5,13 @@ All notable changes to the Chinese Word Hunter (字词猎人) project are docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2026-07-28
+
+### Fixed
+
+- **Board now fills the screen**: The SVG had no intrinsic width and its parent was shrink-to-fit, so browsers fell back to the 300px SVG default regardless of screen size. The board now scales to the viewport (bounded by width, height, and a 640px cap).
+- **Diagonal swipes are reliable**: Tile activation radius reduced from 0.8 to 0.55 × TILE — the old oversized zones made diagonal swipes clip a horizontal/vertical neighbor before reaching the diagonal tile. Tile gap widened from 8 to 12 units for clearer visual separation.
+
 ## [1.2.0] - 2026-07-28
 
 ### Fixed

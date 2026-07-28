@@ -11,7 +11,7 @@ const ROWS = 8
 const COLS = 8
 const TOTAL = ROWS * COLS
 const TILE = 44  // smaller tiles for 8×8
-const GAP = 8
+const GAP = 12   // wide enough that diagonal swipes have room between tiles
 
 // Scoring: simple per-word points
 const BASE_POINTS = 10
@@ -273,7 +273,10 @@ export function cellCenter(i) {
   }
 }
 
-// Find which cell the pointer is over
+// Find which cell the pointer is over.
+// The activation radius is deliberately just over half a tile: a large radius
+// makes diagonal swipes clip the horizontal/vertical neighbor's zone before
+// reaching the diagonal tile, selecting the wrong cell.
 export function cellFromPoint(x, y) {
   const step = TILE + GAP
   const col = Math.floor(x / step)
@@ -282,7 +285,7 @@ export function cellFromPoint(x, y) {
   const cx = col * step + TILE / 2
   const cy = row * step + TILE / 2
   const dist = Math.hypot(x - cx, y - cy)
-  return dist < TILE * 0.8 ? row * COLS + col : -1
+  return dist < TILE * 0.55 ? row * COLS + col : -1
 }
 
 // Check if two cells are adjacent (including diagonal)
