@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   generateDailyGrid, validateWord, lookupWord, scoreWord,
   findWordsInGrid, findWordInGrid, adj, cellFromPoint, getSVGPoint, mulberry32,
-  getDailySeed, STREAK_BONUS
+  getDailySeed, STREAK_BONUS, TOTAL
 } from './gameLogic'
 
 export function useGameState() {
@@ -103,6 +103,11 @@ export function useGameState() {
     if (saved) {
       try {
         const state = JSON.parse(saved)
+        // A saved board from an older version may have different dimensions —
+        // restoring it into this grid would break all index math
+        if (!Array.isArray(state.grid) || state.grid.length !== TOTAL) {
+          throw new Error(`saved grid has ${state.grid?.length} cells, expected ${TOTAL}`)
+        }
         setGrid(state.grid)
         setFound(state.found)
         setScore(state.score)

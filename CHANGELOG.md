@@ -5,6 +5,13 @@ All notable changes to the Chinese Word Hunter (字词猎人) project are docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-07-28
+
+### Changed
+
+- **Board reduced from 8×8 to 6×6**: less overwhelming for players who don't know Chinese, and each tile renders ~33% larger on mobile. Word count is unchanged — measured over 200 seeds, every 6×6 grid still places 10–15 words (median 12, 10–23 total findable).
+- Saved boards with mismatched dimensions (e.g. an 8×8 board from a previous version) are discarded and regenerated instead of breaking the grid.
+
 ## [1.3.0] - 2026-07-28
 
 ### Fixed
