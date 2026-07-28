@@ -168,12 +168,49 @@ export function useGameState() {
     msgTimer.current = setTimeout(() => setMsg(''), 2000)
   }, [])
 
+  // iOS loads TTS voices asynchronously — utterances spoken before the
+  // Chinese voice is ready are silently dropped. Resolve the voice up front
+  // and keep it updated via the voiceschanged event.
+  const zhVoiceRef = useRef(null)
+  useEffect(() => {
+    if (!('speechSynthesis' in window)) return
+    const pickVoice = () => {
+      const voices = speechSynthesis.getVoices()
+      zhVoiceRef.current =
+        voices.find(v => v.lang === 'zh-CN') ||
+        voices.find(v => v.lang && v.lang.startsWith('zh')) ||
+        null
+    }
+    pickVoice()
+    speechSynthesis.addEventListener('voiceschanged', pickVoice)
+    return () => speechSynthesis.removeEventListener('voiceschanged', pickVoice)
+  }, [])
+
+  // iOS also requires speech to be unlocked by a user gesture — speak a
+  // silent utterance from the Start button tap so real words play from word 1
+  const primeTTS = useCallback(() => {
+    if (!('speechSynthesis' in window)) return
+    try {
+      speechSynthesis.getVoices() // kick off async voice loading
+      const utterance = new SpeechSynthesisUtterance(' ')
+      utterance.volume = 0
+      speechSynthesis.speak(utterance)
+    } catch (e) {
+      console.warn('TTS prime error:', e)
+    }
+  }, [])
+
   // Speak word using browser TTS
   const speakWord = useCallback((chinese) => {
     if (!soundOn) return
+    if (!('speechSynthesis' in window)) return
     try {
+      // iOS can leave the queue stuck in a paused state; clear it first
+      if (speechSynthesis.paused) speechSynthesis.resume()
+      speechSynthesis.cancel()
       const utterance = new SpeechSynthesisUtterance(chinese)
       utterance.lang = 'zh-CN'
+      if (zhVoiceRef.current) utterance.voice = zhVoiceRef.current
       utterance.rate = 0.8
       speechSynthesis.speak(utterance)
     } catch (e) {
@@ -257,6 +294,7 @@ export function useGameState() {
 
   // Start game — "Play Again": resets score/found/path but keeps the same daily grid
   const startGame = () => {
+    primeTTS() // runs inside the button tap — the user gesture iOS requires
     setScore(0)
     setFound([])
     setPath([])
@@ -333,8 +371,9 @@ export function useGameState() {
   }, [phase, path, word, submitWord])
 
   const toggleSound = useCallback(() => {
+    if (!soundOn) primeTTS() // re-unlock when sound is turned back on
     setSoundOn(s => !s)
-  }, [])
+  }, [soundOn, primeTTS])
 
   return {
     grid, path, found, score, targetWord,
