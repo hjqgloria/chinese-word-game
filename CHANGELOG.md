@@ -5,6 +5,12 @@ All notable changes to the Chinese Word Hunter (字词猎人) project are docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2026-07-28
+
+### Added
+
+- **"How to play" section on the start screen** — written for players with no Chinese: the pinyin+English clue, swiping in any direction, matching tile pinyin to the clue, pronunciation on found words, scoring/streaks, the 90-second timer, and the shared daily board.
+
 ## [1.4.0] - 2026-07-28
 
 ### Changed

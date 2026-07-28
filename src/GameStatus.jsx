@@ -63,13 +63,44 @@ export default function GameStatus({ phase, score, timeLeft, targetWord, found, 
 
       {/* Start screen */}
       {phase === 'start' && (
-        <div className="flex flex-col items-center gap-6 mt-12">
+        <div className="flex flex-col items-center gap-5 mt-8 px-4">
           <h1 className="text-5xl font-bold text-white">字词猎人</h1>
           <p className="text-xl text-emerald-400">Chinese Word Hunter</p>
           <p className="text-gray-400 text-center max-w-sm">
-            Find Chinese words by connecting characters on the grid.
-            Look at the pinyin prompt and swipe the matching characters!
+            A daily word-search puzzle — no Chinese knowledge needed.
+            Every tile shows its pinyin, so you can play by sound.
           </p>
+
+          <div className="bg-gray-800/80 rounded-xl p-5 max-w-sm w-full text-left">
+            <h2 className="text-emerald-400 font-bold mb-3 text-center">How to play</h2>
+            <ul className="text-gray-300 text-sm space-y-2.5">
+              <li className="flex gap-2.5">
+                <span>🎯</span>
+                <span>You get a clue: a <span className="text-emerald-400">pinyin</span> (how the word sounds) and its English meaning.</span>
+              </li>
+              <li className="flex gap-2.5">
+                <span>👆</span>
+                <span>Swipe across neighboring tiles — in any direction, even diagonally or zig-zag — to connect characters into the word.</span>
+              </li>
+              <li className="flex gap-2.5">
+                <span>💡</span>
+                <span>Match the small pinyin above each character to the clue. Found words are spoken out loud so you learn the sound.</span>
+              </li>
+              <li className="flex gap-2.5">
+                <span>⭐</span>
+                <span>Any valid word counts, not just the target — longer words and streaks earn bonus points.</span>
+              </li>
+              <li className="flex gap-2.5">
+                <span>⏱️</span>
+                <span>Find as many of the hidden words as you can in 90 seconds. Find them all for a +500 bonus!</span>
+              </li>
+              <li className="flex gap-2.5">
+                <span>📅</span>
+                <span>Everyone gets the same board — a new puzzle every day.</span>
+              </li>
+            </ul>
+          </div>
+
           <button
             onClick={() => { startGame(); }}
             className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xl px-10 py-4 rounded-xl transition-colors shadow-lg shadow-emerald-500/30"
