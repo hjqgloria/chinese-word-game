@@ -5,6 +5,16 @@ All notable changes to the Chinese Word Hunter (字词猎人) project are docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2026-07-28
+
+### Fixed
+
+- **Vocabulary data washed** (new `scripts/wash_words.py`, repeatable):
+  - 7,573 of 9,383 pinyin entries had missing or misplaced tone marks (e.g. `taò` → `tào`, `an jian` → `ān jiǎn`) — all regenerated with pypinyin.
+  - 854 glosses cleaned of CEDICT bookkeeping: `CL:` classifier tags, `abbr. for …`, embedded Chinese + bracketed pinyin (e.g. 嘴巴 "mouth (CL:張|张[zhang1])" → "mouth"), and paragraph-length definitions trimmed to clue size.
+  - 98 entries whose gloss was only a cross-reference ("variant of X", "see X") dropped; 安宁, 比如 and 金子 given proper glosses instead.
+- **iOS: pronunciation now plays from the first word**: Safari loads TTS voices asynchronously and silently drops utterances until then, and requires a user gesture to unlock speech. The engine is now primed from the Start button tap, the Chinese voice is resolved up front (`voiceschanged`), and a stuck-paused queue is cleared before speaking.
+
 ## [1.2.1] - 2026-07-28
 
 ### Fixed
