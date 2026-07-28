@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   generateDailyGrid, validateWord, lookupWord, scoreWord,
-  pickTargetWord, findWordsInGrid, findWordInGrid, adj, cellFromPoint, getSVGPoint, mulberry32,
-  getDailySeed, sameDay
+  findWordsInGrid, findWordInGrid, adj, cellFromPoint, getSVGPoint, mulberry32,
+  getDailySeed, STREAK_BONUS
 } from './gameLogic'
 
 export function useGameState() {
@@ -26,6 +26,9 @@ export function useGameState() {
   const pathRef = useRef(path)
   const streakRef = useRef(streak)
   const gridRef = useRef(grid)
+  // Capture the seed once — playing past midnight must keep saving under the
+  // day the grid was generated for, not corrupt the next day's board
+  const seedRef = useRef(getDailySeed())
 
   // Sync refs
   useEffect(() => { pathRef.current = path }, [path])
@@ -34,7 +37,7 @@ export function useGameState() {
 
   // Save current game state to localStorage with today's seed
   const saveDailyState = useCallback((overrideState = {}) => {
-    const seed = getDailySeed()
+    const seed = seedRef.current
     const state = {
       grid: overrideState.grid !== undefined ? overrideState.grid : gridRef.current,
       found: overrideState.found !== undefined ? overrideState.found : found,
@@ -47,11 +50,24 @@ export function useGameState() {
     localStorage.setItem('dailyBoard_' + seed, JSON.stringify(state))
   }, [found, score, totalWordsInGrid, targetWord, phase, timeLeft])
 
-  // Persist daily state whenever key game state changes
+  // Persist daily state whenever key game state changes.
+  // timeLeft is deliberately not a dependency — saving every timer tick would
+  // hit localStorage once per second; it's captured on phase changes and unload.
   useEffect(() => {
     if (grid.length === 0) return // don't save before initialization
     saveDailyState()
-  }, [found, score, phase, timeLeft, targetWord]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [found, score, phase, targetWord]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Save on tab close/reload so the restored timer is accurate
+  const saveRef = useRef(saveDailyState)
+  useEffect(() => { saveRef.current = saveDailyState }, [saveDailyState])
+  useEffect(() => {
+    const onUnload = () => {
+      if (gridRef.current.length > 0) saveRef.current()
+    }
+    window.addEventListener('beforeunload', onUnload)
+    return () => window.removeEventListener('beforeunload', onUnload)
+  }, [])
 
   // Pick a random target from words that are actually in the grid
   const pickTargetFromGrid = useCallback((excludeWords = []) => {
@@ -71,8 +87,18 @@ export function useGameState() {
 
   // Initialize game — generate a daily grid or restore from localStorage
   useEffect(() => {
-    const todaySeed = getDailySeed()
-    const saved = localStorage.getItem('dailyBoard_' + todaySeed)
+    const todaySeed = seedRef.current
+
+    // Prune saved boards from previous days so localStorage doesn't grow forever
+    const todayKey = 'dailyBoard_' + todaySeed
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith('dailyBoard_') && key !== todayKey) {
+        localStorage.removeItem(key)
+      }
+    }
+
+    const saved = localStorage.getItem(todayKey)
 
     if (saved) {
       try {
@@ -82,8 +108,8 @@ export function useGameState() {
         setScore(state.score)
         setTotalWordsInGrid(state.totalWordsInGrid)
         if (state.targetWord) setTargetWord(state.targetWord)
-        if (state.phase) setPhase(state.phase)
-        if (state.timeLeft) setTimeLeft(state.timeLeft)
+        if (state.phase !== undefined) setPhase(state.phase)
+        if (typeof state.timeLeft === 'number') setTimeLeft(state.timeLeft)
         return // done restoring
       } catch (e) {
         console.warn('Failed to restore daily board state:', e)
@@ -158,8 +184,9 @@ export function useGameState() {
   // Get the current word from path
   const word = path.map(i => grid[i]).join('')
 
-  // Submit a word
-  const submitWord = useCallback(async (w) => {
+  // Submit a word. tracedPath is the cell path the player actually swiped —
+  // used for highlighting; falls back to searching the grid when absent.
+  const submitWord = useCallback(async (w, tracedPath = null) => {
     if (w.length < 1) return
 
     // Check if already found
@@ -174,13 +201,13 @@ export function useGameState() {
       const info = lookupWord(w)
       const points = scoreWord(w)
       const newStreak = streakRef.current + 1
-      const totalPoints = points + (newStreak > 1 ? (newStreak - 1) * 3 : 0)
+      const totalPoints = points + (newStreak > 1 ? (newStreak - 1) * STREAK_BONUS : 0)
 
       // Check if this matches the target
       const isTarget = targetWord && w === targetWord.chinese
 
-      // Find the path (indices) of this word in the grid for highlighting
-      const wordPath = findWordInGrid(grid, w)
+      // Path (indices) of this word in the grid for highlighting
+      const wordPath = tracedPath || findWordInGrid(grid, w)
 
       const newFound = [...found, { word: w, points: totalPoints, pinyin: info?.pinyin, english: info?.english, isTarget, path: wordPath }]
       setFound(newFound)
@@ -301,7 +328,7 @@ export function useGameState() {
     if (phase !== 'play') return
     if (e && e.cancelable) e.preventDefault()
     dragging.current = false
-    if (path.length >= 2) submitWord(word)
+    if (path.length >= 2) submitWord(word, path)
     else setPath([])
   }, [phase, path, word, submitWord])
 
