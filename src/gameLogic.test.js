@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   mulberry32, shuffle, generateDailyGrid, findWordsInGrid,
   validateWord, lookupWord, scoreWord, cellCenter, cellFromPoint, adj,
-  ROWS, COLS, TOTAL
+  ROWS, COLS, TOTAL, TILE, GAP
 } from './gameLogic'
 
 describe('generateDailyGrid', () => {
@@ -46,6 +46,26 @@ describe('generateDailyGrid', () => {
     const rng2 = mulberry32(2)
     const { grid: grid2 } = generateDailyGrid(rng2)
     expect(grid1).not.toEqual(grid2)
+  })
+
+  it('never destroys placed words with later placements', () => {
+    // Regression: placements used to overwrite earlier words, leaving
+    // ~half of all daily grids with an unfindable initial target word
+    for (let seed = 1; seed <= 50; seed++) {
+      const { grid, placedWords } = generateDailyGrid(mulberry32(seed))
+      const findable = new Set(findWordsInGrid(grid))
+      for (const word of placedWords) {
+        expect(findable, `seed ${seed}: placed word "${word}" not findable`).toContain(word)
+      }
+    }
+  })
+
+  it('places a reasonable number of words', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const { placedWords } = generateDailyGrid(mulberry32(seed))
+      expect(placedWords.length).toBeGreaterThanOrEqual(10)
+      expect(placedWords.length).toBeLessThanOrEqual(15)
+    }
   })
 })
 
@@ -111,14 +131,14 @@ describe('scoreWord', () => {
 describe('cellCenter', () => {
   it('returns correct coordinates for cell 0', () => {
     const { x, y } = cellCenter(0)
-    expect(x).toBe(32) // TILE/2 = 32
-    expect(y).toBe(32)
+    expect(x).toBe(TILE / 2)
+    expect(y).toBe(TILE / 2)
   })
 
-  it('returns correct coordinates for cell 6 (row 1, col 1)', () => {
-    const { x, y } = cellCenter(6)
-    expect(x).toBe(74 + 32) // (TILE + GAP) * 1 + TILE/2
-    expect(y).toBe(74 + 32) // (TILE + GAP) * 1 + TILE/2
+  it('returns correct coordinates for the cell at row 1, col 1', () => {
+    const { x, y } = cellCenter(COLS + 1)
+    expect(x).toBe((TILE + GAP) + TILE / 2)
+    expect(y).toBe((TILE + GAP) + TILE / 2)
   })
 })
 
@@ -128,16 +148,16 @@ describe('adj', () => {
   })
 
   it('returns true for vertically adjacent cells', () => {
-    expect(adj(0, 5)).toBe(true)
+    expect(adj(0, COLS)).toBe(true)
   })
 
   it('returns true for diagonally adjacent cells', () => {
-    expect(adj(0, 6)).toBe(true)
+    expect(adj(0, COLS + 1)).toBe(true)
   })
 
   it('returns false for non-adjacent cells', () => {
     expect(adj(0, 2)).toBe(false)
-    expect(adj(0, 10)).toBe(false)
+    expect(adj(0, 2 * COLS)).toBe(false)
   })
 
   it('returns false for invalid indices', () => {

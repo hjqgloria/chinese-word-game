@@ -83,8 +83,9 @@ export function shuffle(array, rng = Math.random) {
 // Algorithm:
 // 1. Fill the whole grid with random characters
 // 2. Pick 10-15 random words from the word list
-// 3. Place each word at a random position in horizontal, vertical, or diagonal direction
-//    (overwriting whatever characters are there)
+// 3. Place each word at a random position in horizontal, vertical, or diagonal direction.
+//    A word may only cross a cell used by an earlier word if the character matches
+//    (crossword-style), so placed words are never destroyed by later placements.
 export function generateDailyGrid(rng = Math.random) {
   const allChars = getAllCharacters()
   const grid = new Array(TOTAL)
@@ -101,42 +102,52 @@ export function generateDailyGrid(rng = Math.random) {
 
   // Pick a random number between 10 and 15
   const numWords = 10 + Math.floor(rng() * 6) // 10-15
-  const selectedWords = eligible.slice(0, numWords)
   const placedWords = []
+  const occupied = new Map() // grid index -> character a placed word depends on
 
   // Directions: horizontal, vertical, diagonal (down-right), diagonal (down-left)
   const directions = [[0, 1], [1, 0], [1, 1], [1, -1]]
 
-  // Step 3: Place each word at a random position
-  for (const word of selectedWords) {
+  // Step 3: Place words until we reach numWords or run out of candidates
+  for (const word of eligible) {
+    if (placedWords.length >= numWords) break
     const wordLen = word.length
-    let placed = false
 
     for (let attempt = 0; attempt < 50; attempt++) {
       // Pick a random direction
       const dirIdx = Math.floor(rng() * directions.length)
       const [dr, dc] = directions[dirIdx]
 
-      // Pick a random starting position where the word fits within bounds
+      // Pick a random starting position where the word fits within bounds.
+      // Down-left placement (dc === -1) needs enough columns to its LEFT,
+      // so the start column ranges from wordLen-1 up to COLS-1.
       const maxR = dr === 1 ? ROWS - wordLen : ROWS - 1
-      const maxC = dc === 1 ? COLS - wordLen : dc === -1 ? wordLen - 1 : COLS - 1
-      if (maxR < 0 || maxC < 0) continue
+      const minC = dc === -1 ? wordLen - 1 : 0
+      const maxC = dc === 1 ? COLS - wordLen : COLS - 1
+      if (maxR < 0 || maxC < minC) continue
 
       const r = Math.floor(rng() * (maxR + 1))
-      const c = Math.floor(rng() * (maxC + 1))
+      const c = minC + Math.floor(rng() * (maxC - minC + 1))
 
-      // Place the word character by character (overwriting)
+      // Reject placements that would change a cell another word depends on
+      let fits = true
+      for (let i = 0; i < wordLen; i++) {
+        const idx = (r + dr * i) * COLS + (c + dc * i)
+        if (occupied.has(idx) && occupied.get(idx) !== word[i]) {
+          fits = false
+          break
+        }
+      }
+      if (!fits) continue
+
       for (let i = 0; i < wordLen; i++) {
         const idx = (r + dr * i) * COLS + (c + dc * i)
         grid[idx] = word[i]
+        occupied.set(idx, word[i])
       }
 
-      placed = true
-      break
-    }
-
-    if (placed) {
       placedWords.push(word)
+      break
     }
   }
 
@@ -308,18 +319,6 @@ export function scoreWord(chinese) {
   return points
 }
 
-// Pick a random word for the player to find
-export function pickTargetWord(excludeFound = [], rng = Math.random) {
-  const available = CHINESE_WORDS.filter(w => !excludeFound.includes(w[0]))
-  if (available.length === 0) return null
-  const pick = available[Math.floor(rng() * available.length)]
-  return {
-    chinese: pick[0],
-    pinyin: pick[1],
-    english: pick[2],
-  }
-}
-
 // Get a deterministic seed for today's date
 // The same grid is generated all day, then changes at midnight
 // Format: YYYYMMDD as a number (e.g. 20260725 for July 25, 2026)
@@ -328,9 +327,4 @@ export function getDailySeed() {
   return now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate()
 }
 
-// Check if two seeds represent the same day
-export function sameDay(seedA, seedB) {
-  return seedA === seedB
-}
-
-export { ROWS, COLS, TILE, GAP, TOTAL, WORD_MAP, getAllWords }
+export { ROWS, COLS, TILE, GAP, TOTAL, STREAK_BONUS, WORD_MAP, getAllWords }
