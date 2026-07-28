@@ -5,6 +5,34 @@ All notable changes to the Chinese Word Hunter (字词猎人) project are docume
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-07-28
+
+### Fixed
+
+- **Impossible target words eliminated**: Word placement no longer overwrites previously placed words — a word may only cross an earlier word's cell when the character matches (crossword-style). Previously ~54% of daily grids had an initial target word that could not be traced on the board (measured over 200 seeds; now 0/200).
+- **Down-left diagonal placement was broken**: The start-column range for down-left diagonals was inverted, letting words run off the left edge and wrap into the wrong row. These placements now stay within bounds.
+- **Midnight rollover no longer corrupts the next day's board**: The daily seed is captured once at load, so playing past midnight keeps saving under the day the grid was generated for.
+- **Timer restore edge cases**: A game saved with 0 seconds left no longer restores with a full timer (falsy checks replaced with type checks).
+- **Pinyin labels readable on mobile**: Tile pinyin bumped from 9px light-gray to 11px medium-weight dark-gray — essential for players who don't read Chinese characters.
+- **Noto Sans SC is now actually loaded**: The font was referenced by components but never linked in `index.html`; all users silently fell back to system fonts.
+- **Confetti no longer jumps mid-celebration**: Particles are generated once per celebration (`useMemo`) instead of on every render.
+- **Found-word highlighting uses the traced path**: The player's actual swipe path is stored instead of re-searching the grid, which could highlight a different occurrence of the same word.
+
+### Added
+
+- **你好 added to the vocabulary** (it was missing from the CEDICT-derived list).
+- Regression tests: placed words are always findable (50 seeds); placement count stays within 10–15.
+
+### Changed
+
+- localStorage boards from previous days are pruned at load instead of accumulating forever.
+- Game state is no longer written to localStorage every timer tick; it saves on state changes and tab close.
+- Stale tests updated to derive expectations from the exported grid constants (they still assumed the old 5×5/64px board).
+
+### Removed
+
+- Dead code: unused `pickTargetWord()` and `sameDay()` functions, unused component props (`totalWordsInGrid` on GameBoard, `setPhase`/`onPointerDown` on GameStatus).
+
 ## [1.1.0] - 2025-01-17
 
 ### Fixed
