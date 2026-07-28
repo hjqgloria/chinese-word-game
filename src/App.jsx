@@ -9,9 +9,9 @@ function App() {
     phase, timeLeft, msg, msgType,
     streak, pointerPos, soundOn,
     svgRef, word, dragging, totalWordsInGrid,
-    startGame, submitWord,
+    startGame,
     onPointerDown, onPointerMove, onPointerUp,
-    setPhase, toggleSound, showMsg,
+    toggleSound,
   } = useGameState()
 
   return (
@@ -28,9 +28,7 @@ function App() {
         soundOn={soundOn}
         totalWordsInGrid={totalWordsInGrid}
         startGame={startGame}
-        setPhase={setPhase}
         toggleSound={toggleSound}
-        onPointerDown={onPointerDown}
       />
 
       {(phase === 'play') && grid.length > 0 && (

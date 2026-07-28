@@ -1,6 +1,6 @@
 import { cellCenter, ROWS, COLS, TILE, GAP, adj, getCharPinyin } from './gameLogic'
 
-export default function GameBoard({ grid, path, pointerPos, dragging, svgRef, onPointerDown, onPointerMove, onPointerUp, word, found, totalWordsInGrid }) {
+export default function GameBoard({ grid, path, pointerPos, dragging, svgRef, onPointerDown, onPointerMove, onPointerUp, word, found }) {
   const W = COLS * (TILE + GAP) - GAP
   const H = ROWS * (TILE + GAP) - GAP
   const currentWord = word || ''
@@ -93,14 +93,14 @@ export default function GameBoard({ grid, path, pointerPos, dragging, svgRef, on
                   className="fill-emerald-500"
                 />
               )}
-              {/* Pinyin label above character */}
+              {/* Pinyin label above character — must stay readable on small screens */}
               {pinyinLabel && (
                 <text
                   x={TILE / 2}
-                  y={8}
+                  y={9}
                   textAnchor="middle"
                   dominantBaseline="middle"
-                  className="text-[9px] fill-gray-400 font-light"
+                  className={`text-[11px] font-medium ${canConnect ? 'fill-gray-300' : 'fill-gray-700'}`}
                   style={{ fontFamily: '"Noto Sans SC", sans-serif' }}
                 >
                   {pinyinLabel}
@@ -109,10 +109,10 @@ export default function GameBoard({ grid, path, pointerPos, dragging, svgRef, on
               {/* Chinese character */}
               <text
                 x={TILE / 2}
-                y={TILE / 2 + 2}
+                y={TILE / 2 + 5}
                 textAnchor="middle"
                 dominantBaseline="central"
-                className={`text-[20px] font-medium ${isFound ? 'fill-emerald-700' : 'fill-black'}`}
+                className={`text-[20px] font-medium ${isFound ? 'fill-emerald-700' : canConnect ? 'fill-white' : 'fill-black'}`}
                 style={{ fontFamily: '"Noto Sans SC", sans-serif' }}
               >
                 {char}

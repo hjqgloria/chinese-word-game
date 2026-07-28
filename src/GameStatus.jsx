@@ -1,14 +1,19 @@
-export default function GameStatus({ phase, score, timeLeft, targetWord, found, msg, msgType, streak, soundOn, totalWordsInGrid, startGame, setPhase, toggleSound, onPointerDown }) {
+import { useMemo } from 'react'
 
-  // Generate confetti particles for celebration
-  const confettiParticles = Array.from({ length: 50 }, (_, i) => ({
+export default function GameStatus({ phase, score, timeLeft, targetWord, found, msg, msgType, streak, soundOn, totalWordsInGrid, startGame, toggleSound }) {
+
+  // Generate confetti particles once per celebration — regenerating on every
+  // render makes the particles jump around mid-animation
+  const confettiParticles = useMemo(() => Array.from({ length: 50 }, (_, i) => ({
     id: i,
     left: Math.random() * 100,
     delay: Math.random() * 2,
     duration: 1.5 + Math.random() * 2,
     color: ['#34d399', '#fbbf24', '#f472b6', '#60a5fa', '#a78bfa'][Math.floor(Math.random() * 5)],
     size: 6 + Math.random() * 10,
-  }))
+    round: Math.random() > 0.5,
+    rotate: Math.random() * 360,
+  })), [phase])
 
   return (
     <div className="flex flex-col items-center w-full max-w-md mx-auto relative">
@@ -25,10 +30,10 @@ export default function GameStatus({ phase, score, timeLeft, targetWord, found, 
                 width: p.size,
                 height: p.size,
                 backgroundColor: p.color,
-                borderRadius: Math.random() > 0.5 ? '50%' : '2px',
+                borderRadius: p.round ? '50%' : '2px',
                 animation: `confetti-fall ${p.duration}s ease-in ${p.delay}s infinite`,
                 opacity: 0.9,
-                transform: `rotate(${Math.random() * 360}deg)`,
+                transform: `rotate(${p.rotate}deg)`,
               }}
             />
           ))}
@@ -40,6 +45,7 @@ export default function GameStatus({ phase, score, timeLeft, targetWord, found, 
         <div className="flex items-center justify-between w-full mb-4 px-2">
           <button
             onClick={toggleSound}
+            aria-label={soundOn ? 'Mute sound' : 'Unmute sound'}
             className="text-2xl bg-gray-800 hover:bg-gray-700 rounded-lg p-2 w-12 h-12 flex items-center justify-center transition-colors"
           >
             {soundOn ? '🔊' : '🔇'}
