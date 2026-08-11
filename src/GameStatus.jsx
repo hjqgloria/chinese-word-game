@@ -1,6 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import WordSummaryModal from './WordSummaryModal'
 
 export default function GameStatus({ phase, score, timeLeft, targetWord, found, msg, msgType, streak, soundOn, totalWordsInGrid, startGame, toggleSound }) {
+  const [showSummary, setShowSummary] = useState(false)
 
   // Generate confetti particles once per celebration — regenerating on every
   // render makes the particles jump around mid-animation
@@ -152,12 +154,20 @@ export default function GameStatus({ phase, score, timeLeft, targetWord, found, 
           <h2 className="text-4xl font-bold text-white">Time's Up!</h2>
           <div className="text-6xl font-bold text-emerald-400">{score} pts</div>
           <p className="text-gray-400">Words found: {found.length} / {totalWordsInGrid}</p>
-          <button
-            onClick={startGame}
-            className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xl px-10 py-4 rounded-xl transition-colors shadow-lg shadow-emerald-500/30"
-          >
-            Play Again
-          </button>
+          <div className="flex gap-3 flex-col w-full max-w-sm">
+            <button
+              onClick={() => setShowSummary(true)}
+              className="bg-gray-700 hover:bg-gray-600 text-white font-bold text-lg px-8 py-3 rounded-xl transition-colors"
+            >
+              📖 Review Words
+            </button>
+            <button
+              onClick={startGame}
+              className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xl px-10 py-4 rounded-xl transition-colors shadow-lg shadow-emerald-500/30"
+            >
+              Play Again
+            </button>
+          </div>
         </div>
       )}
 
@@ -183,12 +193,20 @@ export default function GameStatus({ phase, score, timeLeft, targetWord, found, 
               </div>
             ))}
           </div>
-          <button
-            onClick={startGame}
-            className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xl px-10 py-4 rounded-xl transition-colors shadow-lg shadow-emerald-500/30 mt-4"
-          >
-            Play Again
-          </button>
+          <div className="flex gap-3 flex-col w-full max-w-sm mt-4">
+            <button
+              onClick={() => setShowSummary(true)}
+              className="bg-gray-700 hover:bg-gray-600 text-white font-bold text-lg px-8 py-3 rounded-xl transition-colors"
+            >
+              📖 Review Words
+            </button>
+            <button
+              onClick={startGame}
+              className="bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xl px-8 py-4 rounded-xl transition-colors shadow-lg shadow-emerald-500/30"
+            >
+              Play Again
+            </button>
+          </div>
         </div>
       )}
 
@@ -205,6 +223,15 @@ export default function GameStatus({ phase, score, timeLeft, targetWord, found, 
           }
         }
       `}</style>
+
+      {/* Word summary modal */}
+      {showSummary && found.length > 0 && (
+        <WordSummaryModal
+          found={found}
+          phase={phase}
+          onClose={() => setShowSummary(false)}
+        />
+      )}
     </div>
   )
 }
