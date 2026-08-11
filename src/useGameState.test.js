@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useGameState } from './useGameState'
+import { findWordsInGrid } from './gameLogic'
 
 const HINT_DELAY = 15
 
@@ -103,6 +104,22 @@ describe('review card', () => {
     const frozen = result.current.timeLeft
     tick(5)
     expect(result.current.timeLeft).toBe(frozen)
+  })
+
+  it('holds on bonus words too, leaving the target clue alone', () => {
+    const { result } = start()
+    const target = result.current.targetWord
+    const bonus = findWordsInGrid(result.current.grid).find(w => w !== target.chinese)
+    expect(bonus).toBeTruthy()
+
+    act(() => { result.current.revealHint() })
+    act(() => { result.current.submitWord(bonus) })
+    expect(result.current.reviewWord).toMatchObject({ word: bonus, isTarget: false })
+
+    act(() => { result.current.dismissReview() })
+    expect(result.current.reviewWord).toBeNull()
+    expect(result.current.targetWord.chinese).toBe(target.chinese)
+    expect(result.current.hintRevealed).toBe(true)
   })
 
   it('advances to a fresh, unrevealed clue when dismissed', () => {

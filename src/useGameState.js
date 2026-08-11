@@ -236,28 +236,31 @@ export function useGameState() {
         return
       }
 
-      // Found the target — hold the round here so the player can study the
-      // word, and queue the next target for when they dismiss the card
+      // Clearing the target queues up the next one, shown once the player
+      // dismisses the card
       if (isTarget) {
         const foundWords = newFound.map(f => f.word)
         const next = pickTargetFromGrid(foundWords)
-        if (next) {
-          pendingTarget.current = next
-          setReviewWord({
-            word: w,
-            pinyin: info?.pinyin,
-            english: info?.english,
-            points: totalPoints,
-          })
-        } else {
+        if (!next) {
           // No more targets — all words in the grid have been found!
           setTotalWordsInGrid(newFound.length)
           setScore(s => s + 500)
           setPhase('complete')
           dragging.current = false
           showMsg('🎉 ALL WORDS FOUND! 🎉', 'ok')
+          return
         }
+        pendingTarget.current = next
       }
+
+      // Every word earns a beat to study it, target or not
+      setReviewWord({
+        word: w,
+        pinyin: info?.pinyin,
+        english: info?.english,
+        points: totalPoints,
+        isTarget,
+      })
     } else {
       setPath([])
       setStreak(0)

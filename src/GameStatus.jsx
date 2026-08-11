@@ -246,7 +246,7 @@ export default function GameStatus({ phase, score, timeLeft, targetWord, found, 
         <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-40 p-4">
           <div className="bg-gray-900 border border-emerald-500/40 rounded-2xl p-6 max-w-sm w-full text-center">
             <p className="text-emerald-400 font-bold mb-4">
-              ✓ Found it! +{reviewWord.points} pts
+              {reviewWord.isTarget ? '🎯 Target word!' : '✓ Found it!'} +{reviewWord.points} pts
             </p>
 
             <div className="flex items-center justify-center gap-3 mb-3">
@@ -271,7 +271,7 @@ export default function GameStatus({ phase, score, timeLeft, targetWord, found, 
               onClick={dismissReview}
               className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-lg py-3 rounded-xl transition-colors"
             >
-              Next word →
+              {reviewWord.isTarget ? 'Next word →' : 'Keep hunting →'}
             </button>
           </div>
         </div>
