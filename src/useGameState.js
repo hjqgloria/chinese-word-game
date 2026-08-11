@@ -264,7 +264,7 @@ export function useGameState() {
     } else {
       setPath([])
       setStreak(0)
-      showMsg(`"${w}" - Not in word list`, 'bad')
+      showMsg(`"${w}" - Not in our word list`, 'bad')
     }
   }, [found, targetWord, showMsg, speakWord, pickTargetFromGrid, totalWordsInGrid])
 
