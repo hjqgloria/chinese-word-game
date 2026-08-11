@@ -26,11 +26,13 @@ export default function WordSummaryModal({ found, phase, onClose }) {
     loadExamples()
   }, [])
 
-  const speakSentence = (sentence) => {
+  // Only single words are spoken — browser TTS mangles full sentences badly
+  // enough that hearing them hurts more than it helps.
+  const speak = (word) => {
     if (!('speechSynthesis' in window)) return
     try {
       speechSynthesis.cancel()
-      const utterance = new SpeechSynthesisUtterance(sentence)
+      const utterance = new SpeechSynthesisUtterance(word)
       utterance.lang = 'zh-CN'
       utterance.rate = 0.8
       speechSynthesis.speak(utterance)
@@ -60,8 +62,17 @@ export default function WordSummaryModal({ found, phase, onClose }) {
             </button>
 
             <div className="text-center">
-              <div className="text-4xl font-bold text-emerald-400 mb-2">
-                {selected.word}
+              <div className="flex items-center justify-center gap-3 mb-2">
+                <span className="text-4xl font-bold text-emerald-400">
+                  {selected.word}
+                </span>
+                <button
+                  onClick={() => speak(selected.word)}
+                  aria-label={`Pronounce ${selected.word}`}
+                  className="text-2xl bg-gray-800 hover:bg-gray-700 rounded-lg w-11 h-11 flex items-center justify-center transition-colors"
+                >
+                  🔊
+                </button>
               </div>
               <div className="text-sm text-gray-400 mb-3">
                 {selected.pinyin}
@@ -84,12 +95,6 @@ export default function WordSummaryModal({ found, phase, onClose }) {
                 <p className="text-sm text-gray-300 italic">
                   "{exampleData[2]}"
                 </p>
-                <button
-                  onClick={() => speakSentence(exampleData[0])}
-                  className="mt-3 text-2xl bg-gray-700 hover:bg-gray-600 rounded p-2 transition"
-                >
-                  🔊
-                </button>
               </div>
             ) : (
               <div className="bg-gray-800/50 rounded-lg p-4 text-center text-gray-400 text-sm">

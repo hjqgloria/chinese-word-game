@@ -1,0 +1,93 @@
+// @vitest-environment jsdom
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { renderHook, act } from '@testing-library/react'
+import { useGameState } from './useGameState'
+
+const HINT_DELAY = 15
+
+function start() {
+  const view = renderHook(() => useGameState())
+  act(() => { view.result.current.startGame() })
+  return view
+}
+
+// Each timer effect reschedules itself from a render, so a second of game time
+// needs its own act() flush — one big advanceTimersByTime only ticks once.
+function tick(seconds) {
+  for (let i = 0; i < seconds; i++) {
+    act(() => { vi.advanceTimersByTime(1000) })
+  }
+}
+
+describe('clue pacing', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.useFakeTimers()
+  })
+  afterEach(() => { vi.useRealTimers() })
+
+  it('hides the clue so the player can hunt unaided first', () => {
+    const { result } = start()
+    expect(result.current.hintRevealed).toBe(false)
+    expect(result.current.targetWord).toBeTruthy()
+  })
+
+  it('reveals the clue once the delay elapses', () => {
+    const { result } = start()
+    tick(HINT_DELAY - 1)
+    expect(result.current.hintRevealed).toBe(false)
+    tick(2)
+    expect(result.current.hintRevealed).toBe(true)
+  })
+
+  it('reveals the clue on request', () => {
+    const { result } = start()
+    act(() => { result.current.revealHint() })
+    expect(result.current.hintRevealed).toBe(true)
+  })
+})
+
+describe('review card', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.useFakeTimers()
+  })
+  afterEach(() => { vi.useRealTimers() })
+
+  it('holds on the found target instead of jumping to the next clue', () => {
+    const { result } = start()
+    const target = result.current.targetWord
+    act(() => { result.current.submitWord(target.chinese) })
+
+    expect(result.current.reviewWord).toMatchObject({ word: target.chinese })
+    // The clue must not have advanced while the card is up
+    expect(result.current.targetWord.chinese).toBe(target.chinese)
+  })
+
+  it('pauses the round timer while the card is up', () => {
+    const { result } = start()
+    const target = result.current.targetWord
+    act(() => { result.current.submitWord(target.chinese) })
+
+    const frozen = result.current.timeLeft
+    tick(5)
+    expect(result.current.timeLeft).toBe(frozen)
+  })
+
+  it('advances to a fresh, unrevealed clue when dismissed', () => {
+    const { result } = start()
+    const target = result.current.targetWord
+    act(() => { result.current.revealHint() })
+    act(() => { result.current.submitWord(target.chinese) })
+    act(() => { result.current.dismissReview() })
+
+    expect(result.current.reviewWord).toBeNull()
+    expect(result.current.targetWord.chinese).not.toBe(target.chinese)
+    expect(result.current.hintRevealed).toBe(false)
+
+    // ...and the timer runs again
+    const before = result.current.timeLeft
+    tick(2)
+    expect(result.current.timeLeft).toBeLessThan(before)
+  })
+})

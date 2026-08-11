@@ -9,7 +9,8 @@ function App() {
     phase, timeLeft, msg, msgType,
     streak, pointerPos, soundOn,
     svgRef, word, dragging, totalWordsInGrid,
-    startGame,
+    hintRevealed, hintCountdown, reviewWord,
+    startGame, revealHint, dismissReview, pronounce,
     onPointerDown, onPointerMove, onPointerUp,
     toggleSound,
   } = useGameState()
@@ -27,7 +28,13 @@ function App() {
         streak={streak}
         soundOn={soundOn}
         totalWordsInGrid={totalWordsInGrid}
+        hintRevealed={hintRevealed}
+        hintCountdown={hintCountdown}
+        reviewWord={reviewWord}
         startGame={startGame}
+        revealHint={revealHint}
+        dismissReview={dismissReview}
+        pronounce={pronounce}
         toggleSound={toggleSound}
       />
 

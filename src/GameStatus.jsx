@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import WordSummaryModal from './WordSummaryModal'
 
-export default function GameStatus({ phase, score, timeLeft, targetWord, found, msg, msgType, streak, soundOn, totalWordsInGrid, startGame, toggleSound }) {
+export default function GameStatus({ phase, score, timeLeft, targetWord, found, msg, msgType, streak, soundOn, totalWordsInGrid, hintRevealed, hintCountdown, reviewWord, startGame, revealHint, dismissReview, pronounce, toggleSound }) {
   const [showSummary, setShowSummary] = useState(false)
 
   // Generate confetti particles once per celebration — regenerating on every
@@ -78,7 +78,7 @@ export default function GameStatus({ phase, score, timeLeft, targetWord, found, 
             <ul className="text-gray-300 text-sm space-y-2.5">
               <li className="flex gap-2.5">
                 <span>🎯</span>
-                <span>You get a clue: a <span className="text-emerald-400">pinyin</span> (how the word sounds) and its English meaning.</span>
+                <span>Hunt for any word you can spot first. Stuck? A clue — the <span className="text-emerald-400">pinyin</span> (how the word sounds) and its English meaning — unlocks after 15 seconds, or tap to see it sooner.</span>
               </li>
               <li className="flex gap-2.5">
                 <span>👆</span>
@@ -94,7 +94,7 @@ export default function GameStatus({ phase, score, timeLeft, targetWord, found, 
               </li>
               <li className="flex gap-2.5">
                 <span>⏱️</span>
-                <span>Find as many of the hidden words as you can in 90 seconds. Find them all for a +500 bonus!</span>
+                <span>Find as many of the hidden words as you can in 90 seconds — the timer pauses while you study a word you just found. Find them all for a +500 bonus!</span>
               </li>
               <li className="flex gap-2.5">
                 <span>📅</span>
@@ -116,9 +116,26 @@ export default function GameStatus({ phase, score, timeLeft, targetWord, found, 
       {phase === 'play' && targetWord && (
         <div className="w-full mb-3">
           <div className="bg-gray-800 rounded-xl p-4 text-center">
-            <p className="text-gray-400 text-sm mb-1">Find this word:</p>
-            <p className="text-3xl font-bold text-emerald-400 mb-1">{targetWord.pinyin}</p>
-            <p className="text-lg text-gray-300">{targetWord.english}</p>
+            {hintRevealed ? (
+              <>
+                <p className="text-gray-400 text-sm mb-1">Find this word:</p>
+                <p className="text-3xl font-bold text-emerald-400 mb-1">{targetWord.pinyin}</p>
+                <p className="text-lg text-gray-300">{targetWord.english}</p>
+              </>
+            ) : (
+              <>
+                <p className="text-2xl font-bold text-white mb-1">Find any word you can!</p>
+                <p className="text-gray-400 text-sm mb-3">
+                  Clue unlocks in {hintCountdown}s
+                </p>
+                <button
+                  onClick={revealHint}
+                  className="bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-bold px-5 py-2 rounded-lg transition-colors"
+                >
+                  💡 Show clue now
+                </button>
+              </>
+            )}
           </div>
 
           {/* Streak indicator */}
@@ -223,6 +240,42 @@ export default function GameStatus({ phase, score, timeLeft, targetWord, found, 
           }
         }
       `}</style>
+
+      {/* Review card — holds the round on the word the player just found */}
+      {phase === 'play' && reviewWord && (
+        <div className="fixed inset-0 bg-black/75 flex items-center justify-center z-40 p-4">
+          <div className="bg-gray-900 border border-emerald-500/40 rounded-2xl p-6 max-w-sm w-full text-center">
+            <p className="text-emerald-400 font-bold mb-4">
+              ✓ Found it! +{reviewWord.points} pts
+            </p>
+
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <span className="text-5xl font-bold text-white">{reviewWord.word}</span>
+              <button
+                onClick={() => pronounce(reviewWord.word)}
+                aria-label={`Pronounce ${reviewWord.word}`}
+                className="text-2xl bg-gray-800 hover:bg-gray-700 rounded-lg w-12 h-12 flex items-center justify-center transition-colors"
+              >
+                🔊
+              </button>
+            </div>
+
+            <p className="text-2xl text-emerald-400 mb-2">{reviewWord.pinyin}</p>
+            <p className="text-lg text-gray-300 mb-5">{reviewWord.english}</p>
+
+            <p className="text-gray-500 text-xs mb-4">
+              ⏸ Timer paused — take your time
+            </p>
+
+            <button
+              onClick={dismissReview}
+              className="w-full bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-lg py-3 rounded-xl transition-colors"
+            >
+              Next word →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Word summary modal */}
       {showSummary && found.length > 0 && (

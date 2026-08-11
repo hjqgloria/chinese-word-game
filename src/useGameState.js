@@ -5,6 +5,9 @@ import {
   getDailySeed, STREAK_BONUS, TOTAL
 } from './gameLogic'
 
+// Seconds a player gets to hunt unaided before the target word's clue appears
+const HINT_DELAY = 15
+
 export function useGameState() {
   const [grid, setGrid] = useState([])
   const [path, setPath] = useState([])
@@ -19,10 +22,19 @@ export function useGameState() {
   const [pointerPos, setPointerPos] = useState(null)
   const [soundOn, setSoundOn] = useState(true)
   const [totalWordsInGrid, setTotalWordsInGrid] = useState(0) // total findable words in current grid
+  // The target word's clue stays hidden at first so players get a chance to
+  // hunt on their own; it unlocks after HINT_DELAY seconds or on request.
+  const [hintRevealed, setHintRevealed] = useState(false)
+  const [hintCountdown, setHintCountdown] = useState(HINT_DELAY)
+  // Set to the just-found target so the player can study it before moving on.
+  // While it's set the round timer is paused.
+  const [reviewWord, setReviewWord] = useState(null)
 
   const dragging = useRef(false)
   const svgRef = useRef(null)
   const msgTimer = useRef(null)
+  // Next target, held back until the player dismisses the review card
+  const pendingTarget = useRef(null)
   const pathRef = useRef(path)
   const streakRef = useRef(streak)
   const gridRef = useRef(grid)
@@ -153,9 +165,9 @@ export function useGameState() {
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Timer
+  // Timer — paused while the player is studying a word they just found
   useEffect(() => {
-    if (phase !== 'play') return
+    if (phase !== 'play' || reviewWord) return
     if (timeLeft <= 0) {
       setPhase('over')
       dragging.current = false
@@ -163,7 +175,21 @@ export function useGameState() {
     }
     const t = setTimeout(() => setTimeLeft(p => p - 1), 1000)
     return () => clearTimeout(t)
-  }, [phase, timeLeft])
+  }, [phase, timeLeft, reviewWord])
+
+  // Countdown to the clue being revealed. Runs on the same conditions as the
+  // round timer so a paused round never burns the player's unaided hunt time.
+  useEffect(() => {
+    if (phase !== 'play' || reviewWord || hintRevealed) return
+    if (hintCountdown <= 0) {
+      setHintRevealed(true)
+      return
+    }
+    const t = setTimeout(() => setHintCountdown(c => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [phase, reviewWord, hintRevealed, hintCountdown])
+
+  const revealHint = useCallback(() => setHintRevealed(true), [])
 
   // Message display
   const showMsg = useCallback((text, type = 'ok') => {
@@ -205,9 +231,9 @@ export function useGameState() {
     }
   }, [])
 
-  // Speak word using browser TTS
-  const speakWord = useCallback((chinese) => {
-    if (!soundOn) return
+  // Speak a word using browser TTS. Always speaks — this backs the explicit
+  // 🔊 buttons, where a tap is a direct request regardless of the mute toggle.
+  const pronounce = useCallback((chinese) => {
     if (!('speechSynthesis' in window)) return
     try {
       // iOS can leave the queue stuck in a paused state; clear it first
@@ -221,7 +247,13 @@ export function useGameState() {
     } catch (e) {
       console.warn('TTS error:', e)
     }
-  }, [soundOn])
+  }, [])
+
+  // Automatic playback on finding a word — silent when the player has muted
+  const speakWord = useCallback((chinese) => {
+    if (!soundOn) return
+    pronounce(chinese)
+  }, [soundOn, pronounce])
 
   // Get the current word from path
   const word = path.map(i => grid[i]).join('')
@@ -275,12 +307,19 @@ export function useGameState() {
         return
       }
 
-      // If they found the target, pick a new one from the grid
+      // Found the target — hold the round here so the player can study the
+      // word, and queue the next target for when they dismiss the card
       if (isTarget) {
         const foundWords = newFound.map(f => f.word)
         const next = pickTargetFromGrid(foundWords)
         if (next) {
-          setTimeout(() => setTargetWord(next), 500)
+          pendingTarget.current = next
+          setReviewWord({
+            word: w,
+            pinyin: info?.pinyin,
+            english: info?.english,
+            points: totalPoints,
+          })
         } else {
           // No more targets — all words in the grid have been found!
           setTotalWordsInGrid(newFound.length)
@@ -297,6 +336,18 @@ export function useGameState() {
     }
   }, [found, targetWord, showMsg, speakWord, pickTargetFromGrid, totalWordsInGrid])
 
+  // Leave the review card and move on to the queued target word
+  const dismissReview = useCallback(() => {
+    setReviewWord(null)
+    const next = pendingTarget.current
+    pendingTarget.current = null
+    if (next) {
+      setTargetWord(next)
+      setHintRevealed(false)
+      setHintCountdown(HINT_DELAY)
+    }
+  }, [])
+
   // Start game — "Play Again": resets score/found/path but keeps the same daily grid
   const startGame = () => {
     primeTTS() // runs inside the button tap — the user gesture iOS requires
@@ -308,6 +359,10 @@ export function useGameState() {
     setPhase('play')
     setStreak(0)
     setPointerPos(null)
+    setReviewWord(null)
+    setHintRevealed(false)
+    setHintCountdown(HINT_DELAY)
+    pendingTarget.current = null
     dragging.current = false
 
     // Recalculate total words from the grid
@@ -385,7 +440,8 @@ export function useGameState() {
     phase, timeLeft, msg, msgType,
     streak, pointerPos, soundOn,
     svgRef, word, dragging, totalWordsInGrid,
-    startGame, submitWord,
+    hintRevealed, hintCountdown, reviewWord,
+    startGame, submitWord, revealHint, dismissReview, pronounce,
     onPointerDown, onPointerMove, onPointerUp,
     setPhase, toggleSound, showMsg,
   }
