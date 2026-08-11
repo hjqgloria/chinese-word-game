@@ -276,8 +276,11 @@ export function useGameState() {
     if (next) {
       setTargetWord(next)
       setHintRevealed(false)
-      setHintCountdown(HINT_DELAY)
     }
+    // The countdown exists to spot a stuck player, so finding anything at all
+    // — target or bonus — earns a full stretch of unaided hunting again.
+    // An already-revealed clue stays up; it belongs to a target still unfound.
+    setHintCountdown(HINT_DELAY)
   }, [])
 
   // Start game — "Play Again": resets score/found/path but keeps the same daily grid

@@ -46,6 +46,23 @@ describe('clue pacing', () => {
     act(() => { result.current.revealHint() })
     expect(result.current.hintRevealed).toBe(true)
   })
+
+  it('restarts the countdown after any find, so a busy player is never rushed', () => {
+    const { result } = start()
+    const target = result.current.targetWord
+    const bonus = findWordsInGrid(result.current.grid).find(w => w !== target.chinese)
+
+    tick(HINT_DELAY - 2)
+    expect(result.current.hintCountdown).toBeLessThan(HINT_DELAY)
+
+    act(() => { result.current.submitWord(bonus) })
+    act(() => { result.current.dismissReview() })
+    expect(result.current.hintCountdown).toBe(HINT_DELAY)
+
+    // ...and the clue stays hidden through what would have been its old deadline
+    tick(3)
+    expect(result.current.hintRevealed).toBe(false)
+  })
 })
 
 describe('reload', () => {
