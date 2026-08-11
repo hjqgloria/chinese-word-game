@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   generateDailyGrid, validateWord, lookupWord, scoreWord,
   findWordsInGrid, findWordInGrid, adj, cellFromPoint, getSVGPoint, mulberry32,
-  getDailySeed, STREAK_BONUS, TOTAL
+  getDailySeed, STREAK_BONUS
 } from './gameLogic'
 
 // Seconds a player gets to hunt unaided before the target word's clue appears
@@ -38,48 +38,14 @@ export function useGameState() {
   const pathRef = useRef(path)
   const streakRef = useRef(streak)
   const gridRef = useRef(grid)
-  // Capture the seed once — playing past midnight must keep saving under the
-  // day the grid was generated for, not corrupt the next day's board
+  // Capture the seed once — playing past midnight must not swap the board out
+  // from under the player mid-round
   const seedRef = useRef(getDailySeed())
 
   // Sync refs
   useEffect(() => { pathRef.current = path }, [path])
   useEffect(() => { streakRef.current = streak }, [streak])
   useEffect(() => { gridRef.current = grid }, [grid])
-
-  // Save current game state to localStorage with today's seed
-  const saveDailyState = useCallback((overrideState = {}) => {
-    const seed = seedRef.current
-    const state = {
-      grid: overrideState.grid !== undefined ? overrideState.grid : gridRef.current,
-      found: overrideState.found !== undefined ? overrideState.found : found,
-      score: overrideState.score !== undefined ? overrideState.score : score,
-      totalWordsInGrid: overrideState.totalWordsInGrid !== undefined ? overrideState.totalWordsInGrid : totalWordsInGrid,
-      targetWord: overrideState.targetWord !== undefined ? overrideState.targetWord : targetWord,
-      phase: overrideState.phase !== undefined ? overrideState.phase : phase,
-      timeLeft: overrideState.timeLeft !== undefined ? overrideState.timeLeft : timeLeft,
-    }
-    localStorage.setItem('dailyBoard_' + seed, JSON.stringify(state))
-  }, [found, score, totalWordsInGrid, targetWord, phase, timeLeft])
-
-  // Persist daily state whenever key game state changes.
-  // timeLeft is deliberately not a dependency — saving every timer tick would
-  // hit localStorage once per second; it's captured on phase changes and unload.
-  useEffect(() => {
-    if (grid.length === 0) return // don't save before initialization
-    saveDailyState()
-  }, [found, score, phase, targetWord]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Save on tab close/reload so the restored timer is accurate
-  const saveRef = useRef(saveDailyState)
-  useEffect(() => { saveRef.current = saveDailyState }, [saveDailyState])
-  useEffect(() => {
-    const onUnload = () => {
-      if (gridRef.current.length > 0) saveRef.current()
-    }
-    window.addEventListener('beforeunload', onUnload)
-    return () => window.removeEventListener('beforeunload', onUnload)
-  }, [])
 
   // Pick a random target from words that are actually in the grid
   const pickTargetFromGrid = useCallback((excludeWords = []) => {
@@ -97,50 +63,23 @@ export function useGameState() {
     }
   }, [])
 
-  // Initialize game — generate a daily grid or restore from localStorage
+  // Build today's board. The grid is a pure function of the daily seed, so
+  // every load reconstructs the same puzzle without persisting anything — and
+  // a refresh drops the player back on the start screen with a clean round
+  // rather than into a half-finished one.
   useEffect(() => {
-    const todaySeed = seedRef.current
-
-    // Prune saved boards from previous days so localStorage doesn't grow forever
-    const todayKey = 'dailyBoard_' + todaySeed
+    // Round state written by earlier versions would otherwise sit there unread
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const key = localStorage.key(i)
-      if (key && key.startsWith('dailyBoard_') && key !== todayKey) {
-        localStorage.removeItem(key)
-      }
+      if (key && key.startsWith('dailyBoard_')) localStorage.removeItem(key)
     }
 
-    const saved = localStorage.getItem(todayKey)
-
-    if (saved) {
-      try {
-        const state = JSON.parse(saved)
-        // A saved board from an older version may have different dimensions —
-        // restoring it into this grid would break all index math
-        if (!Array.isArray(state.grid) || state.grid.length !== TOTAL) {
-          throw new Error(`saved grid has ${state.grid?.length} cells, expected ${TOTAL}`)
-        }
-        setGrid(state.grid)
-        setFound(state.found)
-        setScore(state.score)
-        setTotalWordsInGrid(state.totalWordsInGrid)
-        if (state.targetWord) setTargetWord(state.targetWord)
-        if (state.phase !== undefined) setPhase(state.phase)
-        if (typeof state.timeLeft === 'number') setTimeLeft(state.timeLeft)
-        return // done restoring
-      } catch (e) {
-        console.warn('Failed to restore daily board state:', e)
-      }
-    }
-
-    // No saved state for today — generate a new daily grid
-    const rng = mulberry32(todaySeed)
+    const rng = mulberry32(seedRef.current)
     const { grid: newGrid, placedWords } = generateDailyGrid(rng)
     setGrid(newGrid)
     // Count total findable words
     const wordsInGrid = findWordsInGrid(newGrid)
-    const totalCount = Math.max(wordsInGrid.length, placedWords.length)
-    setTotalWordsInGrid(totalCount)
+    setTotalWordsInGrid(Math.max(wordsInGrid.length, placedWords.length))
     // Use the first placed word as the target
     const firstWord = placedWords[0] || wordsInGrid[0]
     if (firstWord) {
@@ -153,17 +92,7 @@ export function useGameState() {
         })
       }
     }
-
-    // Save initial state to localStorage
-    saveDailyState({
-      grid: newGrid,
-      found: [],
-      score: 0,
-      totalWordsInGrid: totalCount,
-      targetWord: null, // will be set below
-      phase: 'start',
-    })
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [])
 
   // Timer — paused while the player is studying a word they just found
   useEffect(() => {

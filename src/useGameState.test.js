@@ -47,6 +47,37 @@ describe('clue pacing', () => {
   })
 })
 
+describe('reload', () => {
+  beforeEach(() => { localStorage.clear() })
+
+  it('starts a clean round on the same board rather than resuming', () => {
+    const first = renderHook(() => useGameState())
+    act(() => { first.result.current.startGame() })
+    act(() => { first.result.current.submitWord(first.result.current.targetWord.chinese) })
+    const board = first.result.current.grid
+    expect(first.result.current.found).toHaveLength(1)
+    first.unmount()
+
+    // A refresh remounts the hook from scratch
+    const second = renderHook(() => useGameState())
+    expect(second.result.current.phase).toBe('start')
+    expect(second.result.current.found).toEqual([])
+    expect(second.result.current.score).toBe(0)
+    expect(second.result.current.timeLeft).toBe(90)
+    // ...on the same daily puzzle
+    expect(second.result.current.grid).toEqual(board)
+  })
+
+  it('ignores round state left behind by older versions', () => {
+    localStorage.setItem('dailyBoard_1234', JSON.stringify({ phase: 'play', score: 999 }))
+    const { result } = renderHook(() => useGameState())
+
+    expect(result.current.phase).toBe('start')
+    expect(result.current.score).toBe(0)
+    expect(localStorage.getItem('dailyBoard_1234')).toBeNull()
+  })
+})
+
 describe('review card', () => {
   beforeEach(() => {
     localStorage.clear()
